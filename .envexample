@@ -1,0 +1,8 @@
+DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/miapp
+SECRET_KEY=tu llave super secreta
+# Set to 0 to indicate tokens should not include an expiration (session never expires).
+# WARNING: tokens that never expire are a security risk. Consider using refresh tokens
+# or a very long expiration instead.
+ACCESS_TOKEN_EXPIRE_MINUTES=0
+ALGORITHM=HS256
+DB_SCHEMA=nombre_schema
