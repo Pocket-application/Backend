@@ -1,10 +1,10 @@
 from fastapi import FastAPI
-from middleware.logging import logging_middleware
+from middleware.logging import auditoria_middleware
 from routers import auth, usuarios, cuentas, categorias, flujo, transferencias
 
 app = FastAPI(title="Sistema Financiero")
 
-app.middleware("http")(logging_middleware)
+app.middleware("http")(auditoria_middleware)
 
 app.include_router(auth.router)
 app.include_router(usuarios.router)

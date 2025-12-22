@@ -6,7 +6,7 @@ HEX_CHARS = "0123456789abcdef"
 
 def generate_unique_user_id(
     db: Session,
-    length: int = 7,
+    length: int = 9,
     max_attempts: int = 10
 ) -> str:
     """

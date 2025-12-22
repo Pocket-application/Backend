@@ -1,12 +1,75 @@
-from sqlalchemy import Column, Integer, String, Date, Numeric, ForeignKey
+from sqlalchemy import Column, String, Numeric, DateTime
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
+from datetime import datetime, timezone
+import uuid
+
 from database import Base
 
+
 class Transferencia(Base):
+    """
+    Operación financiera que mueve fondos entre cuentas.
+
+    Una transferencia:
+    - Genera automáticamente dos flujos (ingreso y egreso)
+    - Es atómica y transaccional
+    - No modifica saldos directamente
+    """
+
     __tablename__ = "transferencias"
 
-    id = Column(Integer, primary_key=True)
-    usuario_id = Column(String(7), ForeignKey("usuarios.id", ondelete="CASCADE"), nullable=False)
-    fecha = Column(Date, nullable=False)
-    cuenta_salida = Column(Integer, ForeignKey("cuentas.id", ondelete="RESTRICT"), nullable=False)
-    cuenta_destino = Column(Integer, ForeignKey("cuentas.id", ondelete="RESTRICT"), nullable=False)
-    monto = Column(Numeric(14,2), nullable=False)
+    id = Column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        doc="Identificador único de la transferencia."
+    )
+
+    usuario_id = Column(
+        String,
+        nullable=False,
+        index=True,
+        doc="Usuario que ejecuta la transferencia."
+    )
+
+    cuenta_origen_id = Column(
+        UUID(as_uuid=True),
+        nullable=False,
+        index=True,
+        doc="Cuenta desde la cual se egresan los fondos."
+    )
+
+    cuenta_destino_id = Column(
+        UUID(as_uuid=True),
+        nullable=False,
+        index=True,
+        doc="Cuenta que recibe los fondos."
+    )
+
+    monto = Column(
+        Numeric(14, 2),
+        nullable=False,
+        doc="Monto transferido."
+    )
+
+    descripcion = Column(
+        String,
+        nullable=True,
+        doc="Descripción opcional de la transferencia."
+    )
+
+    estado = Column(
+        String(20),
+        nullable=False,
+        default="confirmada",
+        doc="Estado actual de la transferencia."
+    )
+
+    created_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        doc="Fecha y hora de creación."
+    )
+
