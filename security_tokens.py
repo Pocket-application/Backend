@@ -19,11 +19,20 @@ def verify_password(password: str, hashed: str) -> bool:
     return pwd_context.verify(password, hashed)
 
 def create_access_token(user_id: str, rol: str) -> str:
+    """
+    Crea un JWT de acceso con tiempo de expiración seguro (timestamp UTC en segundos)
+    """
     expire = datetime.now(tz=timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    payload = {"sub": user_id, "rol": rol, "exp": expire}
+    expire_ts = int(expire.timestamp()) 
+    payload = {"sub": user_id, "rol": rol, "exp": expire_ts}
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
+
 def create_refresh_token(user_id: str) -> tuple[str, datetime]:
+    """
+    Crea un refresh token de larga duración (30 días)
+    """
     expire = datetime.now(tz=timezone.utc) + timedelta(days=30)
-    payload = {"sub": user_id, "exp": expire}
+    expire_ts = int(expire.timestamp())
+    payload = {"sub": user_id, "exp": expire_ts}
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM), expire

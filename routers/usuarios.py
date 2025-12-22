@@ -46,6 +46,7 @@ def registrar_usuario(
         apellido=data.apellido,
         correo=data.correo,
         password=get_password_hash(data.password),
+        telefono=data.telefono,
         rol="user"
     )
 

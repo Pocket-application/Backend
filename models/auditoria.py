@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Text, JSON, TIMESTAMP
+from sqlalchemy.dialects.postgresql import INET
 from sqlalchemy.sql import func
 from database import Base
 
@@ -19,7 +20,7 @@ class Auditoria(Base):
     id = Column(Integer, primary_key=True)
 
     usuario_id = Column(
-        String(7),
+        String(9),
         nullable=True,
         doc="Identificador del usuario autenticado. Puede ser NULL para accesos anónimos."
     )
@@ -43,7 +44,7 @@ class Auditoria(Base):
     )
 
     ip = Column(
-        String(45),
+        INET,
         nullable=True,
         doc="Dirección IP de origen del cliente."
     )

@@ -1,6 +1,19 @@
-from sqlalchemy import Column, String, Boolean, TIMESTAMP, CheckConstraint
+from sqlalchemy import Column, String, Boolean, TIMESTAMP
+from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.sql import func
 from database import Base
+
+
+# =========================================================
+# ENUM PostgreSQL: rol_usuario_enum
+# =========================================================
+rol_usuario_enum = ENUM(
+    "user",
+    "admin",
+    name="rol_usuario_enum",
+    create_type=False
+)
+
 
 class Usuario(Base):
     """
@@ -8,8 +21,9 @@ class Usuario(Base):
 
     El usuario:
     - Puede tener múltiples cuentas, categorías y movimientos
-    - Está sujeto a control de roles
-    - Puede ser auditado en todas sus acciones
+    - Está sujeto a control de roles mediante ENUM PostgreSQL
+    - Puede tener teléfono validado a 10 dígitos
+    - Es completamente auditable
     """
 
     __tablename__ = "usuarios"
@@ -37,7 +51,15 @@ class Usuario(Base):
         String,
         unique=True,
         nullable=False,
+        index=True,
         doc="Correo electrónico del usuario."
+    )
+
+    telefono = Column(
+        String(10),
+        nullable=True,
+        index=True,
+        doc="Número de teléfono del usuario (exactamente 10 dígitos)."
     )
 
     password = Column(
@@ -48,14 +70,14 @@ class Usuario(Base):
 
     verificado = Column(
         Boolean,
-        default=True,
+        default=False,
         doc="Indica si el usuario ha sido verificado."
     )
 
     rol = Column(
-        String,
-        default="user",
+        rol_usuario_enum,
         nullable=False,
+        default="user",
         doc="Rol del usuario dentro del sistema."
     )
 
@@ -63,9 +85,4 @@ class Usuario(Base):
         TIMESTAMP,
         server_default=func.now(),
         doc="Fecha de registro del usuario."
-    )
-
-
-    __table_args__ = (
-        CheckConstraint("rol IN ('user','admin')"),
     )

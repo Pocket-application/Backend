@@ -6,6 +6,11 @@ class UsuarioCreate(BaseModel):
     apellido: str
     correo: EmailStr
     password: str = Field(min_length=8)
+    telefono: str | None = Field(
+        default=None,
+        pattern=r"^\d{10}$",
+        description="Número de teléfono de 10 dígitos"
+    )
 
 
 class UsuarioOut(BaseModel):

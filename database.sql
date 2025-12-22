@@ -21,13 +21,18 @@ CREATE TABLE usuarios (
     nombre TEXT NOT NULL,
     apellido TEXT NOT NULL,
     correo TEXT NOT NULL UNIQUE,
+    telefono VARCHAR(10),
     password TEXT NOT NULL,
     verificado BOOLEAN NOT NULL DEFAULT FALSE,
     fecha_registro TIMESTAMP NOT NULL DEFAULT now(),
-    rol rol_usuario_enum NOT NULL DEFAULT 'user'
+    rol rol_usuario_enum NOT NULL DEFAULT 'user',
+
+    CONSTRAINT ck_usuarios_telefono_10_digitos
+        CHECK (telefono ~ '^[0-9]{10}$')
 );
 
 CREATE INDEX idx_usuarios_correo ON usuarios(correo);
+CREATE INDEX idx_usuarios_telefono ON usuarios(telefono);
 
 -- =========================================================
 -- CUENTAS
@@ -35,7 +40,7 @@ CREATE INDEX idx_usuarios_correo ON usuarios(correo);
 
 CREATE TABLE cuentas (
     id SERIAL PRIMARY KEY,
-    usuario_id VARCHAR(7) NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    usuario_id VARCHAR(9) NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
     nombre TEXT NOT NULL,
     UNIQUE(usuario_id, nombre)
 );
@@ -48,7 +53,7 @@ CREATE INDEX idx_cuentas_usuario ON cuentas(usuario_id);
 
 CREATE TABLE categorias (
     id SERIAL PRIMARY KEY,
-    usuario_id VARCHAR(7) NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    usuario_id VARCHAR(9) NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
     nombre TEXT NOT NULL,
     tipo_movimiento tipo_movimiento_enum NOT NULL,
     UNIQUE(usuario_id, nombre)
@@ -62,7 +67,7 @@ CREATE INDEX idx_categorias_usuario ON categorias(usuario_id);
 
 CREATE TABLE transferencias (
     id UUID PRIMARY KEY,
-    usuario_id VARCHAR(7) NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    usuario_id VARCHAR(9) NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
     cuenta_origen_id INT NOT NULL REFERENCES cuentas(id) ON DELETE RESTRICT,
     cuenta_destino_id INT NOT NULL REFERENCES cuentas(id) ON DELETE RESTRICT,
     monto NUMERIC(14,2) NOT NULL CHECK (monto > 0),
@@ -83,7 +88,7 @@ CREATE INDEX idx_transferencias_cuentas ON transferencias(cuenta_origen_id, cuen
 
 CREATE TABLE flujo (
     id SERIAL PRIMARY KEY,
-    usuario_id VARCHAR(7) NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    usuario_id VARCHAR(9) NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
     fecha DATE NOT NULL DEFAULT CURRENT_DATE,
     descripcion TEXT,
 
@@ -123,7 +128,7 @@ CREATE INDEX idx_flujo_estado ON flujo(estado);
 CREATE TABLE auditoria (
     id BIGSERIAL PRIMARY KEY,
     fecha TIMESTAMPTZ NOT NULL DEFAULT now(),
-    usuario_id VARCHAR(7) REFERENCES usuarios(id) ON DELETE SET NULL,
+    usuario_id VARCHAR(9) REFERENCES usuarios(id) ON DELETE SET NULL,
     metodo TEXT NOT NULL,
     ruta TEXT NOT NULL,
     status_code INTEGER NOT NULL,
@@ -140,6 +145,29 @@ CREATE TABLE auditoria (
 CREATE INDEX idx_auditoria_fecha ON auditoria(fecha);
 CREATE INDEX idx_auditoria_usuario ON auditoria(usuario_id);
 CREATE INDEX idx_auditoria_ruta ON auditoria(ruta);
+
+-- =========================================================
+-- REFRESH TOKENS
+-- =========================================================
+CREATE TABLE refresh_tokens (
+    id SERIAL PRIMARY KEY,
+    usuario_id VARCHAR(9) NOT NULL,
+    token TEXT NOT NULL UNIQUE,
+    expira TIMESTAMP WITH TIME ZONE NOT NULL,
+    fecha_creacion TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+
+    CONSTRAINT fk_refresh_usuario
+        FOREIGN KEY (usuario_id)
+        REFERENCES usuarios(id)
+        ON DELETE CASCADE
+);
+
+CREATE INDEX idx_refresh_tokens_usuario_id
+    ON refresh_tokens(usuario_id);
+
+CREATE INDEX idx_refresh_tokens_expira
+    ON refresh_tokens(expira);
+
 
 -- =========================================================
 -- FUNCIONES OPTIMIZADAS
