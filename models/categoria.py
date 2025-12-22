@@ -1,5 +1,11 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, CheckConstraint, UniqueConstraint
+from sqlalchemy import Column, Integer, String, ForeignKey, CheckConstraint, UniqueConstraint, Enum
 from database import Base
+import enum
+
+
+class TipoMovimientoEnum(str, enum.Enum):
+    Ingreso = "Ingreso"
+    Egreso = "Egreso"
 
 
 class Categoria(Base):
@@ -30,14 +36,15 @@ class Categoria(Base):
     )
 
     tipo_movimiento = Column(
-        String,
+        Enum(TipoMovimientoEnum, name="tipo_movimiento_enum", create_type=False),
         nullable=False,
-        doc="Tipo de movimiento permitido: Ingreso, Egreso o Ambos."
+        doc="Tipo de movimiento permitido: Ingreso o Egreso"
     )
+
 
     __table_args__ = (
         CheckConstraint(
-            "tipo_movimiento IN ('Ingreso','Egreso','Ambos')",
+            "tipo_movimiento IN ('Ingreso','Egreso')",
             name="ck_categoria_tipo_movimiento"
         ),
         UniqueConstraint(

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Security, HTTPException
 from sqlalchemy.orm import Session
 
-from models.categoria import Categoria
+from models.categoria import Categoria, TipoMovimientoEnum
 from schemas.categoria import CategoriaCreate, CategoriaUpdate, CategoriaOut
 from dependencies import get_current_user, CurrentUser, get_db
 
@@ -40,7 +40,7 @@ def crear_categoria(
     categoria = Categoria(
         usuario_id=user.id,
         nombre=data.nombre,
-        tipo_movimiento=data.tipo_movimiento
+        tipo_movimiento=TipoMovimientoEnum(data.tipo_movimiento)
     )
     db.add(categoria)
     db.commit()

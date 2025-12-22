@@ -4,7 +4,7 @@ from typing import Literal
 
 class CategoriaBase(BaseModel):
     nombre: str
-    tipo_movimiento: Literal["Ingreso", "Egreso", "Ambos"]
+    tipo_movimiento: Literal["Ingreso", "Egreso"]
 
 
 class CategoriaCreate(CategoriaBase):
@@ -13,7 +13,7 @@ class CategoriaCreate(CategoriaBase):
 
 class CategoriaUpdate(BaseModel):
     nombre: str | None = None
-    tipo_movimiento: Literal["Ingreso", "Egreso", "Ambos"] | None = None
+    tipo_movimiento: Literal["Ingreso", "Egreso"] | None = None
 
 
 class CategoriaOut(CategoriaBase):
