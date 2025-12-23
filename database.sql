@@ -11,6 +11,7 @@ CREATE TYPE tipo_movimiento_enum AS ENUM ('Ingreso', 'Egreso');
 CREATE TYPE estado_movimiento_enum AS ENUM ('pendiente', 'confirmado');
 CREATE TYPE tipo_egreso_enum AS ENUM ('Fijo', 'Variable');
 CREATE TYPE rol_usuario_enum AS ENUM ('user', 'admin');
+CREATE TYPE estado_transferencia_enum AS ENUM ('pendiente', 'confirmada');
 
 -- =========================================================
 -- USUARIOS
@@ -72,7 +73,7 @@ CREATE TABLE transferencias (
     cuenta_destino_id INT NOT NULL REFERENCES cuentas(id) ON DELETE RESTRICT,
     monto NUMERIC(14,2) NOT NULL CHECK (monto > 0),
     descripcion TEXT,
-    estado VARCHAR(20) NOT NULL DEFAULT 'confirmada',
+    estado estado_transferencia_enum NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
 
     CONSTRAINT chk_transferencia_cuentas_distintas

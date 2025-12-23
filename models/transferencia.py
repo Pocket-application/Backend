@@ -1,8 +1,15 @@
-from sqlalchemy import Column, String, Numeric, DateTime
+from sqlalchemy import Column, String, Numeric, DateTime, Enum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 import uuid
+
+EstadoTransferenciaEnum = Enum(
+    "pendiente",
+    "confirmada",
+    name="estado_transferencia_enum",
+    create_type=False
+)
 
 from database import Base
 
@@ -60,7 +67,7 @@ class Transferencia(Base):
     )
 
     estado = Column(
-        String(20),
+        EstadoTransferenciaEnum,
         nullable=False,
         default="confirmada",
         doc="Estado actual de la transferencia."

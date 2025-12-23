@@ -10,7 +10,28 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from database import Base
+from sqlalchemy import Enum
 
+TipoMovimientoEnum = Enum(
+    "Ingreso",
+    "Egreso",
+    name="tipo_movimiento_enum",
+    create_type=False
+)
+
+EstadoEnum = Enum(
+    "pendiente",
+    "confirmado",
+    name="estado_enum",
+    create_type=False
+)
+
+TipoEgresoEnum = Enum(
+    "Fijo",
+    "Variable",
+    name="tipo_egreso_enum",
+    create_type=False
+)
 
 class Flujo(Base):
     """
@@ -69,19 +90,19 @@ class Flujo(Base):
     )
 
     tipo_movimiento = Column(
-        String,
+        TipoMovimientoEnum,
         nullable=False,
         doc="Tipo de movimiento: Ingreso o Egreso."
     )
 
     tipo_egreso = Column(
-        String,
+        TipoEgresoEnum,
         nullable=True,
         doc="Clasificación del egreso: Fijo o Variable. Obligatorio si es egreso."
     )
 
     estado = Column(
-        String,
+        EstadoEnum,
         nullable=False,
         doc="Estado del movimiento: pendiente o confirmado."
     )

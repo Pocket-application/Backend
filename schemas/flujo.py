@@ -13,7 +13,6 @@ class FlujoBase(BaseModel):
     tipo_egreso: Literal["Fijo", "Variable"] | None = None
     estado: Literal["pendiente", "confirmado"]
     monto: float
-    transferencia_id: UUID | None = None
 
     @field_validator("tipo_egreso")
     @classmethod
@@ -23,6 +22,13 @@ class FlujoBase(BaseModel):
             raise ValueError("tipo_egreso es obligatorio cuando tipo_movimiento es Egreso")
         if tipo_mov == "Ingreso" and v is not None:
             raise ValueError("tipo_egreso debe ser null cuando tipo_movimiento es Ingreso")
+        return v
+    
+    @field_validator("tipo_egreso", mode="before")
+    @classmethod
+    def normalizar_vacio(cls, v):
+        if v == "":
+            return None
         return v
 
 
@@ -38,6 +44,23 @@ class FlujoUpdate(BaseModel):
     estado: Literal["pendiente", "confirmado"] | None = None
     monto: float | None = None
     tipo_egreso: Literal["Fijo", "Variable"] | None = None
+    
+    @field_validator("tipo_egreso")
+    @classmethod
+    def validar_tipo_egreso(cls, v, info):
+        tipo_mov = info.data.get("tipo_movimiento")
+        if tipo_mov == "Egreso" and v is None:
+            raise ValueError("tipo_egreso es obligatorio cuando tipo_movimiento es Egreso")
+        if tipo_mov == "Ingreso" and v is not None:
+            raise ValueError("tipo_egreso debe ser null cuando tipo_movimiento es Ingreso")
+        return v
+    
+    @field_validator("tipo_egreso", mode="before")
+    @classmethod
+    def normalizar_vacio(cls, v):
+        if v == "":
+            return None
+        return v
 
 
 class FlujoOut(FlujoBase):

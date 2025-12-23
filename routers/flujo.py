@@ -40,8 +40,7 @@ def crear_movimiento(
         tipo_movimiento=data.tipo_movimiento,
         tipo_egreso=data.tipo_egreso,
         estado=data.estado,
-        monto=data.monto,
-        transferencia_id=data.transferencia_id
+        monto=data.monto
     )
 
     db.add(movimiento)
