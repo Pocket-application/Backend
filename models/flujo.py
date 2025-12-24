@@ -11,6 +11,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from database import Base
 from sqlalchemy import Enum
+from datetime import date
 
 TipoMovimientoEnum = Enum(
     "Ingreso",
@@ -22,7 +23,7 @@ TipoMovimientoEnum = Enum(
 EstadoEnum = Enum(
     "pendiente",
     "confirmado",
-    name="estado_enum",
+    name="estado_movimiento_enum",
     create_type=False
 )
 
@@ -59,6 +60,7 @@ class Flujo(Base):
     fecha = Column(
         Date,
         nullable=False,
+        default= date.today,
         doc="Fecha efectiva del movimiento."
     )
 

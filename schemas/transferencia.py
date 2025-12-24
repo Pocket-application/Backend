@@ -1,9 +1,10 @@
 from pydantic import BaseModel
 from typing import Optional
-from uuid import UUID
+from datetime import datetime
 
 
 class TransferenciaBase(BaseModel):
+    created_at: datetime | None = None
     cuenta_origen_id: int
     cuenta_destino_id: int
     monto: float

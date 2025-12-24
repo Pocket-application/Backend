@@ -29,6 +29,7 @@ class Transferencia(Base):
     id = Column(
         Integer,
         primary_key=True,
+        index=True,
         doc="Identificador único de la transferencia."
     )
 

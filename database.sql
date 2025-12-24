@@ -67,7 +67,7 @@ CREATE INDEX idx_categorias_usuario ON categorias(usuario_id);
 -- =========================================================
 
 CREATE TABLE transferencias (
-    id INT PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     usuario_id VARCHAR(9) NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
     cuenta_origen_id INT NOT NULL REFERENCES cuentas(id) ON DELETE RESTRICT,
     cuenta_destino_id INT NOT NULL REFERENCES cuentas(id) ON DELETE RESTRICT,
@@ -175,60 +175,86 @@ CREATE INDEX idx_refresh_tokens_expira
 -- =========================================================
 
 -- 🔹 Saldo por cuenta
-CREATE OR REPLACE FUNCTION fn_saldo_por_cuenta(uid VARCHAR(7))
+CREATE OR REPLACE FUNCTION fn_saldo_por_cuenta(uid VARCHAR(9))
 RETURNS TABLE(
+    cuenta_id INTEGER,
     cuenta TEXT,
     saldo NUMERIC(14,2)
 ) AS $$
 BEGIN
     RETURN QUERY
     SELECT
-        c.nombre,
+        c.id AS cuenta_id,
+        c.nombre AS cuenta,
         COALESCE(SUM(
             CASE
                 WHEN f.tipo_movimiento = 'Ingreso' THEN f.monto
                 WHEN f.tipo_movimiento = 'Egreso' THEN -f.monto
             END
-        ),0)
+        ), 0) AS saldo
     FROM cuentas c
     LEFT JOIN flujo f
         ON f.cuenta_id = c.id
         AND f.estado = 'confirmado'
     WHERE c.usuario_id = uid
-    GROUP BY c.nombre
+    GROUP BY c.id, c.nombre
     ORDER BY c.nombre;
 END;
 $$ LANGUAGE plpgsql STABLE;
 
+
+
 -- 🔹 Saldo por rango
 CREATE OR REPLACE FUNCTION fn_saldo_rango(
-    uid VARCHAR(7),
+    uid VARCHAR(9),
     fecha_inicio DATE,
     fecha_fin DATE
 )
 RETURNS TABLE(
+    cuenta_id INTEGER,
     cuenta TEXT,
     saldo NUMERIC(14,2)
 ) AS $$
 BEGIN
+    -- 🔒 Validaciones duras
+    IF uid IS NULL THEN
+        RAISE EXCEPTION 'El usuario no puede ser NULL';
+    END IF;
+
+    IF fecha_inicio IS NULL OR fecha_fin IS NULL THEN
+        RAISE EXCEPTION 'Las fechas no pueden ser NULL';
+    END IF;
+
+    IF fecha_inicio > fecha_fin THEN
+        RAISE EXCEPTION
+            'La fecha inicial (%) no puede ser mayor que la final (%)',
+            fecha_inicio,
+            fecha_fin;
+    END IF;
+
     RETURN QUERY
     SELECT
-        c.nombre,
-        COALESCE(SUM(
-            CASE
-                WHEN f.tipo_movimiento = 'Ingreso' THEN f.monto
-                WHEN f.tipo_movimiento = 'Egreso' THEN -f.monto
-            END
-        ),0)
+        c.id AS cuenta_id,
+        c.nombre AS cuenta,
+        COALESCE(
+            SUM(
+                CASE
+                    WHEN f.tipo_movimiento = 'Ingreso' THEN f.monto
+                    WHEN f.tipo_movimiento = 'Egreso' THEN -f.monto
+                END
+            ),
+            0
+        )::NUMERIC(14,2) AS saldo
     FROM cuentas c
     LEFT JOIN flujo f
         ON f.cuenta_id = c.id
         AND f.estado = 'confirmado'
         AND f.fecha BETWEEN fecha_inicio AND fecha_fin
     WHERE c.usuario_id = uid
-    GROUP BY c.nombre
+    GROUP BY c.id, c.nombre
     ORDER BY c.nombre;
 END;
 $$ LANGUAGE plpgsql STABLE;
+
 
 COMMIT;

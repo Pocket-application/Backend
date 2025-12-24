@@ -1,5 +1,7 @@
+from datetime import date
 from sqlalchemy.orm import Session
-from sqlalchemy import text
+from sqlalchemy import text, Integer, String, Numeric
+from sqlalchemy.exc import SQLAlchemyError, DBAPIError
 
 
 def saldo_por_cuenta(db: Session, usuario_id: str):
@@ -32,58 +34,51 @@ def saldo_por_cuenta(db: Session, usuario_id: str):
     """
 
     sql = text("""
-        SELECT * 
+        SELECT *
         FROM finanzas.fn_saldo_por_cuenta(:uid)
-    """)
+    """).columns(
+        cuenta_id=Integer,
+        cuenta=String,
+        saldo=Numeric
+    )
 
     result = db.execute(sql, {"uid": usuario_id})
-    return result.fetchall()
+
+    filas = result.mappings().all()
+
+    return filas
 
 
 def saldo_rango(
     db: Session,
     usuario_id: str,
-    fecha_inicio,
-    fecha_fin
+    fecha_inicio: date,
+    fecha_fin: date
 ):
     """
     Obtiene el saldo consolidado del usuario dentro de un rango de fechas.
-
-    Esta función permite realizar análisis financiero histórico,
-    como balances por período, reportes mensuales o comparaciones
-    entre rangos de tiempo.
-
-    El cálculo se delega a una función almacenada en PostgreSQL:
-        finanzas.fn_saldo_rango(
-            usuario_id,
-            fecha_inicio,
-            fecha_fin
-        )
-
-    Parámetros:
-    ----------
-    db : Session
-        Sesión activa de SQLAlchemy.
-    usuario_id : str
-        Identificador del usuario propietario de los movimientos.
-    fecha_inicio : date
-        Fecha inicial del rango (inclusive).
-    fecha_fin : date
-        Fecha final del rango (inclusive).
-
-    Retorna:
-    -------
-    list
-        Lista de resultados calculados por la función SQL.
-        Normalmente incluye información como:
-        - saldo_inicial
-        - total_ingresos
-        - total_egresos
-        - saldo_final
     """
 
+    # 🔒 Validaciones de entrada (fail fast)
+    if not usuario_id or not usuario_id.strip():
+        raise ValueError("El usuario_id es obligatorio")
+
+    if fecha_inicio is None or fecha_fin is None:
+        raise ValueError("Las fechas no pueden ser nulas")
+
+    if not isinstance(fecha_inicio, date) or not isinstance(fecha_fin, date):
+        raise TypeError("fecha_inicio y fecha_fin deben ser de tipo date")
+
+    if fecha_inicio > fecha_fin:
+        raise ValueError(
+            "La fecha inicial no puede ser mayor que la fecha final"
+        )
+
     sql = text("""
-        SELECT *
+        SELECT
+            cuenta_id,
+            cuenta,
+            saldo
         FROM finanzas.fn_saldo_rango(
             :uid,
             :fecha_inicio,
@@ -91,13 +86,37 @@ def saldo_rango(
         )
     """)
 
-    result = db.execute(
-        sql,
-        {
-            "uid": usuario_id,
-            "fecha_inicio": fecha_inicio,
-            "fecha_fin": fecha_fin
-        }
-    )
+    try:
+        result = db.execute(
+            sql,
+            {
+                "uid": usuario_id,
+                "fecha_inicio": fecha_inicio,
+                "fecha_fin": fecha_fin
+            }
+        )
 
-    return result.fetchall()
+        rows = result.fetchall()
+
+    except DBAPIError as e:
+        # 🔐 Errores provenientes de PostgreSQL (RAISE EXCEPTION)
+        raise ValueError(
+            "Error al calcular el saldo por rango. "
+            "Verifique los parámetros enviados."
+        ) from e
+
+    except SQLAlchemyError as e:
+        # 🔥 Error inesperado de infraestructura
+        raise RuntimeError(
+            "Error interno al consultar el saldo"
+        ) from e
+
+    # 🧠 Contrato de retorno claro
+    return [
+        {
+            "cuenta_id": row.cuenta_id,
+            "cuenta": row.cuenta,
+            "saldo": float(row.saldo)
+        }
+        for row in rows
+    ]
