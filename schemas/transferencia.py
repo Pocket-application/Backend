@@ -22,7 +22,10 @@ class TransferenciaUpdate(BaseModel):
 
 
 class TransferenciaOut(TransferenciaBase):
-    id: UUID
+    id: int
+    cuenta_origen_id: int
+    cuenta_destino_id: int
+    monto: float
     estado: str
 
     class Config:

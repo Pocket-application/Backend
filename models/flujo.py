@@ -82,8 +82,8 @@ class Flujo(Base):
     )
 
     transferencia_id = Column(
-        UUID(as_uuid=True),
-        ForeignKey("transferencias.id", ondelete="RESTRICT"),
+        Integer,
+        ForeignKey("transferencias.id", ondelete="CASCADE"),
         nullable=True,
         index=True,
         doc="Transferencia asociada, si aplica."

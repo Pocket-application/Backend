@@ -13,6 +13,7 @@ from models.usuario import Usuario
 from security_tokens import get_password_hash, verify_password
 from dependencies import get_db, get_current_user, CurrentUser
 from utils.id_generator import generate_unique_user_id
+from services.categorias import crear_categorias_default
 
 router = APIRouter(
     prefix="/usuarios",
@@ -37,7 +38,6 @@ def registrar_usuario(
     if db.query(Usuario).filter(Usuario.correo == data.correo).first():
         raise HTTPException(status_code=400, detail="Correo ya registrado")
 
-    # 🔹 Generar ID único
     user_id = generate_unique_user_id(db)
 
     user = Usuario(
@@ -50,9 +50,22 @@ def registrar_usuario(
         rol="user"
     )
 
-    db.add(user)
-    db.commit()
-    db.refresh(user)
+    try:
+        db.add(user)
+        db.flush()  # importante para tener el usuario antes del commit
+
+        crear_categorias_default(user.id, db)
+
+        db.commit()
+        db.refresh(user)
+
+    except Exception:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Error al registrar el usuario"
+        )
+
     return user
 
 

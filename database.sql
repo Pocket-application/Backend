@@ -57,7 +57,7 @@ CREATE TABLE categorias (
     usuario_id VARCHAR(9) NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
     nombre TEXT NOT NULL,
     tipo_movimiento tipo_movimiento_enum NOT NULL,
-    UNIQUE(usuario_id, nombre)
+    UNIQUE(usuario_id, nombre, tipo_movimiento)
 );
 
 CREATE INDEX idx_categorias_usuario ON categorias(usuario_id);
@@ -67,7 +67,7 @@ CREATE INDEX idx_categorias_usuario ON categorias(usuario_id);
 -- =========================================================
 
 CREATE TABLE transferencias (
-    id UUID PRIMARY KEY,
+    id INT PRIMARY KEY,
     usuario_id VARCHAR(9) NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
     cuenta_origen_id INT NOT NULL REFERENCES cuentas(id) ON DELETE RESTRICT,
     cuenta_destino_id INT NOT NULL REFERENCES cuentas(id) ON DELETE RESTRICT,
@@ -101,7 +101,7 @@ CREATE TABLE flujo (
 
     monto NUMERIC(14,2) NOT NULL CHECK (monto >= 0),
 
-    transferencia_id UUID REFERENCES transferencias(id) ON DELETE RESTRICT,
+    transferencia_id INT REFERENCES transferencias(id) ON DELETE CASCADE,
 
     tipo_egreso tipo_egreso_enum,
 

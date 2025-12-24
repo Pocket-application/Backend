@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Numeric, DateTime, Enum
+from sqlalchemy import Column, String, Numeric, DateTime, Enum, Integer, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
@@ -27,28 +27,28 @@ class Transferencia(Base):
     __tablename__ = "transferencias"
 
     id = Column(
-        UUID(as_uuid=True),
+        Integer,
         primary_key=True,
-        default=uuid.uuid4,
         doc="Identificador único de la transferencia."
     )
 
     usuario_id = Column(
-        String,
+        String(9),
+        ForeignKey("usuarios.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
         doc="Usuario que ejecuta la transferencia."
     )
 
     cuenta_origen_id = Column(
-        UUID(as_uuid=True),
+        Integer,
         nullable=False,
         index=True,
         doc="Cuenta desde la cual se egresan los fondos."
     )
 
     cuenta_destino_id = Column(
-        UUID(as_uuid=True),
+        Integer,
         nullable=False,
         index=True,
         doc="Cuenta que recibe los fondos."
@@ -69,7 +69,6 @@ class Transferencia(Base):
     estado = Column(
         EstadoTransferenciaEnum,
         nullable=False,
-        default="confirmada",
         doc="Estado actual de la transferencia."
     )
 

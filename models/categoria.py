@@ -23,7 +23,7 @@ class Categoria(Base):
     id = Column(Integer, primary_key=True)
 
     usuario_id = Column(
-        String(7),
+        String(9),
         ForeignKey("usuarios.id", ondelete="CASCADE"),
         nullable=False,
         doc="Usuario propietario de la categoría."
@@ -50,6 +50,7 @@ class Categoria(Base):
         UniqueConstraint(
             "usuario_id",
             "nombre",
+            "tipo_movimiento",
             name="uq_usuario_categoria"
         ),
     )
