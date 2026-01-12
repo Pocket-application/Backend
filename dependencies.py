@@ -4,11 +4,12 @@ from jose import jwt, JWTError
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from database import SessionLocal
+from core.settings import settings 
 
 security = HTTPBearer()
 
-SECRET_KEY = os.environ["SECRET_KEY"]
-ALGORITHM = os.environ["ALGORITHM"]
+SECRET_KEY = settings.secret_key
+ALGORITHM = settings.algorithm
 
 class CurrentUser:
     def __init__(self, id: str, rol: str):

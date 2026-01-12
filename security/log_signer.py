@@ -1,9 +1,9 @@
 import hmac
 import hashlib
 import json
-import os
+from core.settings import settings
 
-LOG_SIGNING_KEY = os.environ["LOG_SIGNING_KEY"]
+LOG_SIGNING_KEY = settings.log_signing_key
 
 
 def sign_log(data: dict, firma_anterior: str | None) -> str:

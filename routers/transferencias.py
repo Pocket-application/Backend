@@ -207,7 +207,7 @@ async def obtener_transferencia(
     if not transferencia:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Transferencia no encontrada"
+            detail="Transferencia no encontrada" 
         )
 
     await cache_set(cache_key, transferencia)
@@ -246,7 +246,7 @@ async def actualizar_transferencia(
     cuenta_origen = data.cuenta_origen_id or transferencia.cuenta_origen_id
     cuenta_destino = data.cuenta_destino_id or transferencia.cuenta_destino_id
 
-    if cuenta_origen == cuenta_destino:
+    if cuenta_origen == cuenta_destino: # type: ignore[call-arg]
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="La cuenta origen y destino no pueden ser la misma"
@@ -265,9 +265,9 @@ async def actualizar_transferencia(
     )
 
     for flujo in flujos:
-        flujo.cuenta_id = (
+        flujo.cuenta_id = ( # type: ignore[call-arg]
             cuenta_origen
-            if flujo.tipo_movimiento == "Egreso"
+            if flujo.tipo_movimiento == "Egreso" # type: ignore[call-arg]
             else cuenta_destino
         )
         flujo.monto = transferencia.monto

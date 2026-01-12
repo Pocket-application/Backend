@@ -1,12 +1,9 @@
-import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
-from load_env import load_env_file
+from core.settings import settings
 
-load_env_file()
-
-DATABASE_URL = os.environ["DATABASE_URL"]
-DB_SCHEMA = os.environ.get("DB_SCHEMA", "public")
+DATABASE_URL = settings.database_url
+DB_SCHEMA = settings.db_schema
 
 class Base(DeclarativeBase):
     pass

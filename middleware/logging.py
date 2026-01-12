@@ -7,9 +7,10 @@ from jose import jwt, JWTError
 from database import SessionLocal
 from models.auditoria import Auditoria
 from security.log_signer import sign_log
+from core.settings import settings
 
-SECRET_KEY = os.environ["SECRET_KEY"]
-ALGORITHM = os.environ["ALGORITHM"]
+SECRET_KEY = settings.secret_key
+ALGORITHM = settings.algorithm
 
 # ===============================
 # RUTAS PÚBLICAS (Swagger / OpenAPI)

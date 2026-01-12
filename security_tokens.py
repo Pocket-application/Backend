@@ -1,14 +1,11 @@
-import os
 from datetime import datetime, timedelta, timezone
 from jose import jwt
 from passlib.context import CryptContext
-from load_env import load_env_file
+from core.settings import settings
 
-load_env_file()
-
-SECRET_KEY = os.environ["SECRET_KEY"]
-ALGORITHM = os.environ["ALGORITHM"]
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ["ACCESS_TOKEN_EXPIRE_MINUTES"])
+SECRET_KEY = settings.secret_key
+ALGORITHM = settings.algorithm
+ACCESS_TOKEN_EXPIRE_MINUTES = int(settings.access_token_expire_minutes)
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

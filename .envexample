@@ -7,3 +7,5 @@ ACCESS_TOKEN_EXPIRE_MINUTES=0
 ALGORITHM=HS256
 DB_SCHEMA=nombre_schema
 LOG_SIGNING_KEY=super_clave_secreta_larga_y_unica_123456
+REDIS_HOST=localhost
+REDIS_PORT=6379
