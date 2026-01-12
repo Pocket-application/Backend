@@ -1,9 +1,11 @@
-from fastapi import APIRouter, Depends, Security, HTTPException
+from fastapi import APIRouter, Depends, Security, HTTPException, status
 from sqlalchemy.orm import Session
 
 from models.flujo import Flujo
 from schemas.flujo import FlujoCreate, FlujoUpdate, FlujoOut
 from dependencies import get_current_user, CurrentUser, get_db
+
+from core.cache import cache_get, cache_set, cache_delete_pattern
 
 router = APIRouter(
     prefix="/flujo",
@@ -14,11 +16,11 @@ router = APIRouter(
 # CREAR MOVIMIENTO
 # =========================================================
 @router.post("/", response_model=FlujoOut)
-def crear_movimiento(
-        data: FlujoCreate,
-        user: CurrentUser = Security(get_current_user),
-        db: Session = Depends(get_db)
-    ):
+async def crear_movimiento(
+    data: FlujoCreate,
+    user: CurrentUser = Security(get_current_user),
+    db: Session = Depends(get_db)
+):
     """
     Registra un movimiento financiero (Ingreso o Egreso).
 
@@ -31,6 +33,7 @@ def crear_movimiento(
     - Si es Egreso, tipo_egreso es obligatorio
     - Si es Ingreso, tipo_egreso debe ser NULL
     """
+
     movimiento = Flujo(
         usuario_id=user.id,
         fecha=data.fecha,
@@ -46,45 +49,64 @@ def crear_movimiento(
     db.add(movimiento)
     db.commit()
     db.refresh(movimiento)
+
+    # 🧨 INVALIDAR CACHE DE FLUJO Y SALDOS
+    await cache_delete_pattern(f"flujo:list:{user.id}")
+    await cache_delete_pattern(f"saldos:cuentas:{user.id}")
+    await cache_delete_pattern(f"saldos:rango:{user.id}:*")
+
     return movimiento
 
 
 # =========================================================
-# LISTAR MOVIMIENTOS DEL USUARIO
+# LISTAR MOVIMIENTOS DEL USUARIO (CACHE)
 # =========================================================
 @router.get("/", response_model=list[FlujoOut])
-def listar_movimientos(
-        user: CurrentUser = Security(get_current_user),
-        db: Session = Depends(get_db)
-    ):
+async def listar_movimientos(
+    user: CurrentUser = Security(get_current_user),
+    db: Session = Depends(get_db)
+):
     """
     Lista todos los movimientos financieros del usuario.
 
-    Se ordenan por fecha descendente y luego por ID.
+    - Se ordenan por fecha descendente y luego por ID.
+    - Resultado cacheado en Redis.
     """
-    return (
+
+    cache_key = f"flujo:list:{user.id}"
+
+    cached = await cache_get(cache_key)
+    if cached is not None:
+        return cached
+
+    movimientos = (
         db.query(Flujo)
         .filter(Flujo.usuario_id == user.id)
         .order_by(Flujo.fecha.desc(), Flujo.id.desc())
         .all()
     )
 
+    await cache_set(cache_key, movimientos)
+
+    return movimientos
+
 
 # =========================================================
 # ACTUALIZAR MOVIMIENTO (PATCH SEMÁNTICO)
 # =========================================================
 @router.put("/{movimiento_id}", response_model=FlujoOut)
-def actualizar_movimiento(
-        movimiento_id: int,
-        data: FlujoUpdate,
-        user: CurrentUser = Security(get_current_user),
-        db: Session = Depends(get_db)
-    ):
+async def actualizar_movimiento(
+    movimiento_id: int,
+    data: FlujoUpdate,
+    user: CurrentUser = Security(get_current_user),
+    db: Session = Depends(get_db)
+):
     """
     Actualiza parcialmente un movimiento financiero existente.
 
     Solo se modifican los campos enviados en la petición.
     """
+
     movimiento = (
         db.query(Flujo)
         .filter(
@@ -95,31 +117,41 @@ def actualizar_movimiento(
     )
 
     if not movimiento:
-        raise HTTPException(status_code=404, detail="Movimiento no encontrado")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Movimiento no encontrado"
+        )
 
     for campo, valor in data.model_dump(exclude_unset=True).items():
         setattr(movimiento, campo, valor)
 
     db.commit()
     db.refresh(movimiento)
+
+    # 🧨 INVALIDAR CACHE
+    await cache_delete_pattern(f"flujo:list:{user.id}")
+    await cache_delete_pattern(f"saldos:cuentas:{user.id}")
+    await cache_delete_pattern(f"saldos:rango:{user.id}:*")
+
     return movimiento
 
 
 # =========================================================
 # ELIMINAR MOVIMIENTO
 # =========================================================
-@router.delete("/{movimiento_id}")
-def eliminar_movimiento(
-        movimiento_id: int,
-        user: CurrentUser = Security(get_current_user),
-        db: Session = Depends(get_db)
-    ):
+@router.delete("/{movimiento_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def eliminar_movimiento(
+    movimiento_id: int,
+    user: CurrentUser = Security(get_current_user),
+    db: Session = Depends(get_db)
+):
     """
     Elimina un movimiento financiero del usuario.
 
     No permite eliminar movimientos que estén ligados
     a una transferencia.
     """
+
     movimiento = (
         db.query(Flujo)
         .filter(
@@ -130,9 +162,15 @@ def eliminar_movimiento(
     )
 
     if not movimiento:
-        raise HTTPException(status_code=404, detail="Movimiento no encontrado")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Movimiento no encontrado"
+        )
 
     db.delete(movimiento)
     db.commit()
 
-    return {"detail": "Movimiento eliminado correctamente"}
+    # 🧨 INVALIDAR CACHE
+    await cache_delete_pattern(f"flujo:list:{user.id}")
+    await cache_delete_pattern(f"saldos:cuentas:{user.id}")
+    await cache_delete_pattern(f"saldos:rango:{user.id}:*")

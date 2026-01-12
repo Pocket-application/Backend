@@ -10,6 +10,7 @@ from services.saldos_service import (
     reajustar_saldo
 )
 from schemas.saldos import SaldoCuentaOut, ReajusteSaldoIn
+from core.cache import cache_get, cache_set, cache_delete_pattern
 
 router = APIRouter(
     prefix="/saldos",
@@ -17,7 +18,7 @@ router = APIRouter(
 )
 
 @router.get("/cuentas", response_model=List[SaldoCuentaOut])
-def saldos_por_cuenta(
+async def saldos_por_cuenta(
         user: CurrentUser = Security(get_current_user),
         db: Session = Depends(get_db)
     ):
@@ -27,11 +28,21 @@ def saldos_por_cuenta(
     El cálculo se realiza mediante funciones SQL optimizadas
     en la base de datos.
     """
-    return obtener_saldos_usuario(db, user.id)
+    cache_key = f"saldos:cuentas:{user.id}"
+
+    cached = await cache_get(cache_key)
+    if cached is not None:
+        return cached
+
+    data = obtener_saldos_usuario(db, user.id)
+
+    await cache_set(cache_key, data)
+
+    return data
 
 
 @router.get("/rango", response_model=List[SaldoCuentaOut])
-def saldos_por_rango(
+async def saldos_por_rango(
         fecha_inicio: date,
         fecha_fin: date,
         user: CurrentUser = Security(get_current_user),
@@ -50,18 +61,40 @@ def saldos_por_rango(
     400 Bad Request
         Si el rango de fechas es inválido.
     """
+    if fecha_inicio > fecha_fin:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La fecha inicial no puede ser mayor a la final"
+        )
+
+    cache_key = (
+        f"saldos:rango:{user.id}:"
+        f"{fecha_inicio.isoformat()}:{fecha_fin.isoformat()}"
+    )
+
+    cached = await cache_get(cache_key)
+    if cached is not None:
+        return cached
+
     try:
-        return obtener_saldos_rango(
+        data = obtener_saldos_rango(
             db,
             user.id,
             fecha_inicio,
             fecha_fin
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+    await cache_set(cache_key, data)
+
+    return data
 
 @router.post("/reajuste", status_code=status.HTTP_204_NO_CONTENT)
-def reajustar_saldo_cuenta(
+async def reajustar_saldo_cuenta(
     payload: ReajusteSaldoIn,
     user: CurrentUser = Security(get_current_user),
     db: Session = Depends(get_db)
@@ -81,5 +114,8 @@ def reajustar_saldo_cuenta(
             saldo_real=payload.saldo_real,
             descripcion=payload.descripcion
         )
+        # 🧨 INVALIDACIÓN DE CACHE
+        await cache_delete_pattern(f"saldos:cuentas:{user.id}")
+        await cache_delete_pattern(f"saldos:rango:{user.id}:*")
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

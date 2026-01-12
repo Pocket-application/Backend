@@ -1,17 +1,21 @@
-from fastapi import APIRouter, Depends, Security, HTTPException
+from fastapi import APIRouter, Depends, Security, HTTPException, status
 from sqlalchemy.orm import Session
+from datetime import date
 
 from models.transferencia import Transferencia
 from models.flujo import Flujo
 from models.categoria import Categoria
+
 from schemas.transferencia import (
     TransferenciaCreate,
     TransferenciaUpdate,
     TransferenciaOut
 )
+
 from dependencies import get_current_user, CurrentUser, get_db
 from services.saldos_service import obtener_saldo_cuenta
-from datetime import date
+
+from core.cache import cache_get, cache_set, cache_delete_pattern
 
 
 router = APIRouter(
@@ -23,7 +27,7 @@ router = APIRouter(
 # CREAR TRANSFERENCIA
 # =========================================================
 @router.post("/", response_model=TransferenciaOut)
-def crear_transferencia(
+async def crear_transferencia(
     data: TransferenciaCreate,
     user: CurrentUser = Security(get_current_user),
     db: Session = Depends(get_db)
@@ -36,9 +40,10 @@ def crear_transferencia(
     - Un Flujo Ingreso
     Ambos vinculados a la transferencia.
     """
+
     if data.cuenta_origen_id == data.cuenta_destino_id:
         raise HTTPException(
-            status_code=400,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail="La cuenta origen y destino no pueden ser la misma"
         )
 
@@ -65,7 +70,7 @@ def crear_transferencia(
 
     if not categoria_egreso or not categoria_ingreso:
         raise HTTPException(
-            status_code=500,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Categorías de transferencia no configuradas"
         )
 
@@ -78,7 +83,7 @@ def crear_transferencia(
 
     if saldo_origen < data.monto:
         raise HTTPException(
-            status_code=400,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail="Saldo insuficiente en la cuenta origen"
         )
 
@@ -126,40 +131,56 @@ def crear_transferencia(
         db.commit()
         db.refresh(transferencia)
 
-    except Exception as e:
+    except Exception:
         db.rollback()
         raise HTTPException(
-            status_code=500,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error al crear la transferencia"
         )
+
+    # 🧨 INVALIDACIÓN GLOBAL
+    await cache_delete_pattern(f"transferencias:*:{user.id}*")
+    await cache_delete_pattern(f"flujo:list:{user.id}")
+    await cache_delete_pattern(f"saldos:*:{user.id}*")
 
     return transferencia
 
 
 # =========================================================
-# LISTAR TRANSFERENCIAS
+# LISTAR TRANSFERENCIAS (CACHE)
 # =========================================================
 @router.get("/", response_model=list[TransferenciaOut])
-def listar_transferencias(
+async def listar_transferencias(
     user: CurrentUser = Security(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     Lista todas las transferencias del usuario autenticado.
+    Resultado cacheado en Redis.
     """
-    return (
+
+    cache_key = f"transferencias:list:{user.id}"
+
+    cached = await cache_get(cache_key)
+    if cached is not None:
+        return cached
+
+    transferencias = (
         db.query(Transferencia)
         .filter(Transferencia.usuario_id == user.id)
         .order_by(Transferencia.created_at.desc(), Transferencia.id.desc())
         .all()
     )
 
+    await cache_set(cache_key, transferencias)
+    return transferencias
+
 
 # =========================================================
-# OBTENER TRANSFERENCIA
+# OBTENER TRANSFERENCIA (CACHE)
 # =========================================================
 @router.get("/{transferencia_id}", response_model=TransferenciaOut)
-def obtener_transferencia(
+async def obtener_transferencia(
     transferencia_id: int,
     user: CurrentUser = Security(get_current_user),
     db: Session = Depends(get_db)
@@ -167,6 +188,13 @@ def obtener_transferencia(
     """
     Obtiene una transferencia específica del usuario.
     """
+
+    cache_key = f"transferencias:detail:{user.id}:{transferencia_id}"
+
+    cached = await cache_get(cache_key)
+    if cached is not None:
+        return cached
+
     transferencia = (
         db.query(Transferencia)
         .filter(
@@ -177,8 +205,12 @@ def obtener_transferencia(
     )
 
     if not transferencia:
-        raise HTTPException(status_code=404, detail="Transferencia no encontrada")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Transferencia no encontrada"
+        )
 
+    await cache_set(cache_key, transferencia)
     return transferencia
 
 
@@ -186,7 +218,7 @@ def obtener_transferencia(
 # ACTUALIZAR TRANSFERENCIA + FLUJOS
 # =========================================================
 @router.put("/{transferencia_id}", response_model=TransferenciaOut)
-def actualizar_transferencia(
+async def actualizar_transferencia(
     transferencia_id: int,
     data: TransferenciaUpdate,
     user: CurrentUser = Security(get_current_user),
@@ -206,22 +238,23 @@ def actualizar_transferencia(
     )
 
     if not transferencia:
-        raise HTTPException(status_code=404, detail="Transferencia no encontrada")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Transferencia no encontrada"
+        )
 
     cuenta_origen = data.cuenta_origen_id or transferencia.cuenta_origen_id
     cuenta_destino = data.cuenta_destino_id or transferencia.cuenta_destino_id
 
     if cuenta_origen == cuenta_destino:
         raise HTTPException(
-            status_code=400,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail="La cuenta origen y destino no pueden ser la misma"
         )
 
-    # 🔹 Actualizar transferencia
     for campo, valor in data.model_dump(exclude_unset=True).items():
         setattr(transferencia, campo, valor)
 
-    # 🔹 Actualizar flujos
     flujos = (
         db.query(Flujo)
         .filter(
@@ -232,24 +265,30 @@ def actualizar_transferencia(
     )
 
     for flujo in flujos:
-        if flujo.tipo_movimiento == "Egreso":
-            flujo.cuenta_id = cuenta_origen
-        else:
-            flujo.cuenta_id = cuenta_destino
-
+        flujo.cuenta_id = (
+            cuenta_origen
+            if flujo.tipo_movimiento == "Egreso"
+            else cuenta_destino
+        )
         flujo.monto = transferencia.monto
         flujo.descripcion = transferencia.descripcion
 
     db.commit()
     db.refresh(transferencia)
+
+    # 🧨 INVALIDAR CACHE
+    await cache_delete_pattern(f"transferencias:*:{user.id}*")
+    await cache_delete_pattern(f"flujo:list:{user.id}")
+    await cache_delete_pattern(f"saldos:*:{user.id}*")
+
     return transferencia
 
 
 # =========================================================
 # ELIMINAR TRANSFERENCIA + FLUJOS
 # =========================================================
-@router.delete("/{transferencia_id}")
-def eliminar_transferencia(
+@router.delete("/{transferencia_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def eliminar_transferencia(
     transferencia_id: int,
     user: CurrentUser = Security(get_current_user),
     db: Session = Depends(get_db)
@@ -268,7 +307,10 @@ def eliminar_transferencia(
     )
 
     if not transferencia:
-        raise HTTPException(status_code=404, detail="Transferencia no encontrada")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Transferencia no encontrada"
+        )
 
     db.query(Flujo).filter(
         Flujo.transferencia_id == transferencia.id
@@ -277,4 +319,7 @@ def eliminar_transferencia(
     db.delete(transferencia)
     db.commit()
 
-    return {"detail": "Transferencia eliminada correctamente"}
+    # 🧨 INVALIDAR CACHE
+    await cache_delete_pattern(f"transferencias:*:{user.id}*")
+    await cache_delete_pattern(f"flujo:list:{user.id}")
+    await cache_delete_pattern(f"saldos:*:{user.id}*")
