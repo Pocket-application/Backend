@@ -13,6 +13,7 @@ CATEGORIAS_INGRESO_DEFAULT = [
     "Ingresos extraordinarios",
     "Transferencia",
     "Transferencias entre cuentas",
+    "Reajuste de saldo",
 ]
 
 CATEGORIAS_EGRESO_DEFAULT = [
@@ -28,4 +29,5 @@ CATEGORIAS_EGRESO_DEFAULT = [
     "Otros gastos",
     "Transferencia",
     "Transferencias entre cuentas",
+    "Reajuste de saldo",
 ]

@@ -256,5 +256,107 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql STABLE;
 
+-- Función para reajustar el saldo de una cuenta
+CREATE OR REPLACE FUNCTION fn_reajustar_saldo_cuenta(
+    p_usuario_id VARCHAR(9),
+    p_cuenta_id INT,
+    p_saldo_real NUMERIC(14,2),
+    p_descripcion TEXT DEFAULT 'Reajuste de saldo'
+)
+RETURNS VOID AS $$
+DECLARE
+    v_saldo_actual NUMERIC(14,2);
+    v_diferencia NUMERIC(14,2);
+    v_tipo_movimiento tipo_movimiento_enum;
+    v_monto NUMERIC(14,2);
+    v_categoria_id INT;
+BEGIN
+    -- 🔒 Validaciones
+    IF p_usuario_id IS NULL THEN
+        RAISE EXCEPTION 'usuario_id no puede ser NULL';
+    END IF;
+
+    IF p_saldo_real < 0 THEN
+        RAISE EXCEPTION 'El saldo real no puede ser negativo';
+    END IF;
+
+    -- 🔐 Verificar que la cuenta pertenece al usuario
+    PERFORM 1
+    FROM cuentas
+    WHERE id = p_cuenta_id
+      AND usuario_id = p_usuario_id;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'La cuenta no pertenece al usuario';
+    END IF;
+
+    -- 📊 Obtener saldo actual
+    SELECT saldo
+    INTO v_saldo_actual
+    FROM fn_saldo_por_cuenta(p_usuario_id)
+    WHERE cuenta_id = p_cuenta_id;
+
+    v_saldo_actual := COALESCE(v_saldo_actual, 0);
+
+    -- 🧮 Calcular diferencia
+    v_diferencia := p_saldo_real - v_saldo_actual;
+
+    -- 🟰 Si no hay diferencia, no hacer nada
+    IF v_diferencia = 0 THEN
+        RETURN;
+    END IF;
+
+    -- 🧭 Determinar tipo
+    IF v_diferencia > 0 THEN
+        v_tipo_movimiento := 'Ingreso';
+        v_monto := v_diferencia;
+    ELSE
+        v_tipo_movimiento := 'Egreso';
+        v_monto := ABS(v_diferencia);
+    END IF;
+
+    -- 🗂 Obtener o crear categoría "Reajuste de saldo"
+    SELECT id
+    INTO v_categoria_id
+    FROM categorias
+    WHERE usuario_id = p_usuario_id
+      AND nombre = 'Reajuste de saldo'
+      AND tipo_movimiento = v_tipo_movimiento;
+
+    IF v_categoria_id IS NULL THEN
+        INSERT INTO categorias (usuario_id, nombre, tipo_movimiento)
+        VALUES (p_usuario_id, 'Reajuste de saldo', v_tipo_movimiento)
+        RETURNING id INTO v_categoria_id;
+    END IF;
+
+    -- 📝 Insertar movimiento
+    INSERT INTO flujo (
+        usuario_id,
+        fecha,
+        descripcion,
+        categoria_id,
+        cuenta_id,
+        tipo_movimiento,
+        estado,
+        monto,
+        tipo_egreso
+    ) VALUES (
+        p_usuario_id,
+        CURRENT_DATE,
+        p_descripcion,
+        v_categoria_id,
+        p_cuenta_id,
+        v_tipo_movimiento,
+        'confirmado',
+        v_monto,
+        CASE
+            WHEN v_tipo_movimiento = 'Egreso' THEN 'Variable'::tipo_egreso_enum
+            ELSE NULL
+        END
+    );
+
+END;
+$$ LANGUAGE plpgsql;
+
 
 COMMIT;

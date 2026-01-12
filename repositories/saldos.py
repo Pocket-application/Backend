@@ -2,6 +2,7 @@ from datetime import date
 from sqlalchemy.orm import Session
 from sqlalchemy import text, Integer, String, Numeric
 from sqlalchemy.exc import SQLAlchemyError, DBAPIError
+from decimal import Decimal
 
 
 def saldo_por_cuenta(db: Session, usuario_id: str):
@@ -120,3 +121,50 @@ def saldo_rango(
         }
         for row in rows
     ]
+    
+def reajustar_saldo_cuenta(
+    db: Session,
+    usuario_id: str,
+    cuenta_id: int,
+    saldo_real: Decimal,
+    descripcion: str | None = None
+) -> None:
+    """
+    Ejecuta la función SQL fn_reajustar_saldo_cuenta.
+
+    La lógica de validación y cálculo vive en PostgreSQL.
+    """
+    if not usuario_id:
+        raise ValueError("Usuario inválido")
+
+    if cuenta_id <= 0:
+        raise ValueError("Cuenta inválida")
+
+    if saldo_real < 0:
+        raise ValueError("El saldo real no puede ser negativo")
+
+    sql = text("""
+        SELECT finanzas.fn_reajustar_saldo_cuenta(
+            :usuario_id,
+            :cuenta_id,
+            :saldo_real,
+            :descripcion
+        )
+    """)
+
+    try:
+        db.execute(
+            sql,
+            {
+                "usuario_id": usuario_id,
+                "cuenta_id": cuenta_id,
+                "saldo_real": saldo_real,
+                "descripcion": descripcion
+            }
+        )
+        db.commit()
+
+    except DBAPIError as e:
+        raise ValueError(
+            "No fue posible reajustar el saldo de la cuenta"
+        ) from e

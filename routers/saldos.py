@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Security, HTTPException
+from fastapi import APIRouter, Depends, Security, HTTPException, status
 from sqlalchemy.orm import Session
 from datetime import date
 from typing import List
@@ -6,9 +6,10 @@ from typing import List
 from dependencies import get_db, get_current_user, CurrentUser
 from services.saldos_service import (
     obtener_saldos_usuario,
-    obtener_saldos_rango
+    obtener_saldos_rango,
+    reajustar_saldo
 )
-from schemas.saldos import SaldoCuentaOut
+from schemas.saldos import SaldoCuentaOut, ReajusteSaldoIn
 
 router = APIRouter(
     prefix="/saldos",
@@ -58,3 +59,27 @@ def saldos_por_rango(
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/reajuste", status_code=status.HTTP_204_NO_CONTENT)
+def reajustar_saldo_cuenta(
+    payload: ReajusteSaldoIn,
+    user: CurrentUser = Security(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Reajusta el saldo real de una cuenta.
+
+    Se genera automáticamente un movimiento contable
+    (Ingreso o Egreso) con la categoría:
+        'Reajuste de saldo'
+    """
+    try:
+        reajustar_saldo(
+            db=db,
+            usuario_id=user.id,
+            cuenta_id=payload.cuenta_id,
+            saldo_real=payload.saldo_real,
+            descripcion=payload.descripcion
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
