@@ -145,6 +145,9 @@ Los saldos se calculan mediante **funciones SQL optimizadas**.
 ### Saldo por rango de fechas
 `GET /saldos/rango?fecha_inicio=YYYY-MM-DD&fecha_fin=YYYY-MM-DD`
 
+### Reajuste de saldo
+`POST /saldos/reajuste`
+
 ---
 
 ## 🧾 Auditoría
