@@ -8,5 +8,5 @@ class SaldoCuentaOut(BaseModel):
 
 class ReajusteSaldoIn(BaseModel):
     cuenta_id: int 
-    saldo_real: float
+    saldo_real: Decimal
     descripcion: str | None = Field(default="Reajuste de saldo")
