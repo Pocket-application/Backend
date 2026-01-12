@@ -221,6 +221,68 @@ Proyecto listo para:
 
 ---
 
+## 🧠 Cache con Redis
+
+Este proyecto utiliza Redis como sistema de cache para optimizar el rendimiento de los endpoints de lectura más costosos, reduciendo la carga sobre la base de datos y mejorando los tiempos de respuesta del API.
+
+La cache se aplica exclusivamente en operaciones de lectura (GET) y se invalida automáticamente ante cualquier operación de escritura que pueda afectar los datos.
+
+### 🏗️ Arquitectura de Cache
+
+* Backend: FastAPI
+* Cache: Redis
+* Cliente Redis: ``redis-py`` en modo asíncrono
+* Estrategia: Cache por usuario (multi-tenant safe)
+* TTL por defecto: 5 minutos
+```bash
+Cliente → FastAPI → Redis (hit) → Response
+                  ↓ (miss)
+               PostgreSQL → Redis → Response
+```
+### 🔐 Principios de Diseño
+* ✅ Cache solo para lectura
+* ❌ Nunca cachear escritura
+* 🔄 Invalidación agresiva
+* 🧩 Keys segmentadas por usuario
+* 🚀 Fallback automático a DB
+
+### 🧩 Estructura de Keys
+
+Las claves de Redis siguen una estructura clara y consistente:
+
+#### Saldos
+```bash
+saldos:cuentas:{user_id}
+saldos:rango:{user_id}:{fecha_inicio}:{fecha_fin}
+```
+#### Flujos
+```bash
+flujo:list:{user_id}
+```
+
+#### Transferencias
+```bash
+transferencias:list:{user_id}
+transferencias:detail:{user_id}:{transferencia_id}
+```
+
+### 🧨 Estrategia de Invalidación
+
+Cualquier operación que modifique datos financieros invalida automáticamente:
+* Cache de saldos
+* Cache de flujos
+* Cache de transferencias
+
+Ejemplo:
+```py
+await cache_delete_pattern(f"saldos:*:{user.id}*")
+await cache_delete_pattern(f"flujo:list:{user.id}")
+await cache_delete_pattern(f"transferencias:*:{user.id}*")
+```
+
+Esto garantiza consistencia total sin necesidad de lógica compleja.
+---
+
 ## 📄 Licencia
 
 Este proyecto está licenciado bajo la **Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)**.
