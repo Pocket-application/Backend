@@ -1,4 +1,4 @@
-DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/miapp
+DATABASE_URL=postgresql+psycopg://postgres:password@postgres:5432/miapp
 SECRET_KEY=tu llave super secreta
 # Set to 0 to indicate tokens should not include an expiration (session never expires).
 # WARNING: tokens that never expire are a security risk. Consider using refresh tokens
@@ -7,5 +7,5 @@ ACCESS_TOKEN_EXPIRE_MINUTES=0
 ALGORITHM=HS256
 DB_SCHEMA=nombre_schema
 LOG_SIGNING_KEY=super_clave_secreta_larga_y_unica_123456
-REDIS_HOST=localhost
+REDIS_HOST=redis
 REDIS_PORT=6379

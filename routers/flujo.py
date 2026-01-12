@@ -13,6 +13,26 @@ router = APIRouter(
 )
 
 # =========================================================
+# SERIALIZADOR DE FLUJO (CLAVE PARA REDIS)
+# =========================================================
+def serialize_flujo(flujos: list[Flujo]) -> list[dict]:
+    return [
+        {
+            "id": f.id,
+            "fecha": f.fecha.isoformat(),
+            "descripcion": f.descripcion,
+            "categoria_id": f.categoria_id,
+            "cuenta_id": f.cuenta_id,
+            "tipo_movimiento": f.tipo_movimiento,
+            "tipo_egreso": f.tipo_egreso,
+            "estado": f.estado,
+            "monto": float(f.monto),  # type: ignore
+            "transferencia_id": f.transferencia_id
+        }
+        for f in flujos
+    ]
+
+# =========================================================
 # CREAR MOVIMIENTO
 # =========================================================
 @router.post("/", response_model=FlujoOut)
@@ -50,10 +70,9 @@ async def crear_movimiento(
     db.commit()
     db.refresh(movimiento)
 
-    # 🧨 INVALIDAR CACHE DE FLUJO Y SALDOS
+    # 🧨 INVALIDACIÓN
     await cache_delete_pattern(f"flujo:list:{user.id}")
-    await cache_delete_pattern(f"saldos:cuentas:{user.id}")
-    await cache_delete_pattern(f"saldos:rango:{user.id}:*")
+    await cache_delete_pattern(f"saldos:*:{user.id}*")
 
     return movimiento
 
@@ -72,23 +91,23 @@ async def listar_movimientos(
     - Se ordenan por fecha descendente y luego por ID.
     - Resultado cacheado en Redis.
     """
-
     cache_key = f"flujo:list:{user.id}"
 
     cached = await cache_get(cache_key)
     if cached is not None:
         return cached
 
-    movimientos = (
+    flujos = (
         db.query(Flujo)
         .filter(Flujo.usuario_id == user.id)
         .order_by(Flujo.fecha.desc(), Flujo.id.desc())
         .all()
     )
 
-    await cache_set(cache_key, movimientos)
+    serialized = serialize_flujo(flujos)
+    await cache_set(cache_key, serialized)
 
-    return movimientos
+    return serialized
 
 
 # =========================================================
@@ -106,7 +125,6 @@ async def actualizar_movimiento(
 
     Solo se modifican los campos enviados en la petición.
     """
-
     movimiento = (
         db.query(Flujo)
         .filter(
@@ -117,10 +135,7 @@ async def actualizar_movimiento(
     )
 
     if not movimiento:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Movimiento no encontrado"
-        )
+        raise HTTPException(status_code=404, detail="Movimiento no encontrado")
 
     for campo, valor in data.model_dump(exclude_unset=True).items():
         setattr(movimiento, campo, valor)
@@ -128,10 +143,9 @@ async def actualizar_movimiento(
     db.commit()
     db.refresh(movimiento)
 
-    # 🧨 INVALIDAR CACHE
+    # 🧨 INVALIDACIÓN
     await cache_delete_pattern(f"flujo:list:{user.id}")
-    await cache_delete_pattern(f"saldos:cuentas:{user.id}")
-    await cache_delete_pattern(f"saldos:rango:{user.id}:*")
+    await cache_delete_pattern(f"saldos:*:{user.id}*")
 
     return movimiento
 
@@ -151,7 +165,6 @@ async def eliminar_movimiento(
     No permite eliminar movimientos que estén ligados
     a una transferencia.
     """
-
     movimiento = (
         db.query(Flujo)
         .filter(
@@ -162,15 +175,11 @@ async def eliminar_movimiento(
     )
 
     if not movimiento:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Movimiento no encontrado"
-        )
+        raise HTTPException(status_code=404, detail="Movimiento no encontrado")
 
     db.delete(movimiento)
     db.commit()
 
-    # 🧨 INVALIDAR CACHE
+    # 🧨 INVALIDACIÓN
     await cache_delete_pattern(f"flujo:list:{user.id}")
-    await cache_delete_pattern(f"saldos:cuentas:{user.id}")
-    await cache_delete_pattern(f"saldos:rango:{user.id}:*")
+    await cache_delete_pattern(f"saldos:*:{user.id}*")

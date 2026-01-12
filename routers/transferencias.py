@@ -24,6 +24,36 @@ router = APIRouter(
 )
 
 # =========================================================
+# SERIALIZADOR TRANSFERENCIAS
+# =========================================================
+def serialize_transferencias(items: list[Transferencia]) -> list[dict]:
+    return [
+        {
+            "id": t.id,
+            "cuenta_origen_id": t.cuenta_origen_id,
+            "cuenta_destino_id": t.cuenta_destino_id,
+            "monto": float(t.monto),  # type: ignore
+            "descripcion": t.descripcion,
+            "estado": t.estado,
+            "created_at": t.created_at.isoformat()
+        }
+        for t in items
+    ]
+
+
+def serialize_transferencia(t: Transferencia) -> dict:
+    return {
+        "id": t.id,
+        "cuenta_origen_id": t.cuenta_origen_id,
+        "cuenta_destino_id": t.cuenta_destino_id,
+        "monto": float(t.monto),  # type: ignore
+        "descripcion": t.descripcion,
+        "estado": t.estado,
+        "created_at": t.created_at.isoformat()
+    }
+
+
+# =========================================================
 # CREAR TRANSFERENCIA
 # =========================================================
 @router.post("/", response_model=TransferenciaOut)
@@ -158,22 +188,23 @@ async def listar_transferencias(
     Lista todas las transferencias del usuario autenticado.
     Resultado cacheado en Redis.
     """
-
     cache_key = f"transferencias:list:{user.id}"
 
     cached = await cache_get(cache_key)
     if cached is not None:
         return cached
 
-    transferencias = (
+    items = (
         db.query(Transferencia)
         .filter(Transferencia.usuario_id == user.id)
         .order_by(Transferencia.created_at.desc(), Transferencia.id.desc())
         .all()
     )
 
-    await cache_set(cache_key, transferencias)
-    return transferencias
+    serialized = serialize_transferencias(items)
+    await cache_set(cache_key, serialized)
+
+    return serialized
 
 
 # =========================================================
@@ -188,7 +219,6 @@ async def obtener_transferencia(
     """
     Obtiene una transferencia específica del usuario.
     """
-
     cache_key = f"transferencias:detail:{user.id}:{transferencia_id}"
 
     cached = await cache_get(cache_key)
@@ -205,13 +235,12 @@ async def obtener_transferencia(
     )
 
     if not transferencia:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Transferencia no encontrada" 
-        )
+        raise HTTPException(status_code=404, detail="Transferencia no encontrada") 
 
-    await cache_set(cache_key, transferencia)
-    return transferencia
+    serialized = serialize_transferencia(transferencia)
+    await cache_set(cache_key, serialized)
+
+    return serialized
 
 
 # =========================================================

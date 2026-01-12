@@ -17,11 +17,29 @@ router = APIRouter(
     tags=["Saldos"]
 )
 
+
+# =========================================================
+# UTILIDAD DE SERIALIZACIÓN (clave para Redis)
+# =========================================================
+def serialize_saldos(rows):
+    return [
+        {
+            "cuenta_id": row["cuenta_id"],
+            "cuenta": row["cuenta"],
+            "saldo": float(row["saldo"])
+        }
+        for row in rows
+    ]
+
+
+# =========================================================
+# SALDOS POR CUENTA
+# =========================================================
 @router.get("/cuentas", response_model=List[SaldoCuentaOut])
 async def saldos_por_cuenta(
-        user: CurrentUser = Security(get_current_user),
-        db: Session = Depends(get_db)
-    ):
+    user: CurrentUser = Security(get_current_user),
+    db: Session = Depends(get_db)
+):
     """
     Obtiene el saldo actual de todas las cuentas del usuario.
 
@@ -35,31 +53,25 @@ async def saldos_por_cuenta(
         return cached
 
     data = obtener_saldos_usuario(db, user.id)
+    serialized = serialize_saldos(data)
 
-    await cache_set(cache_key, data)
+    await cache_set(cache_key, serialized)
 
-    return data
+    return serialized
 
 
+# =========================================================
+# SALDOS POR RANGO DE FECHAS
+# =========================================================
 @router.get("/rango", response_model=List[SaldoCuentaOut])
 async def saldos_por_rango(
-        fecha_inicio: date,
-        fecha_fin: date,
-        user: CurrentUser = Security(get_current_user),
-        db: Session = Depends(get_db)
-    ):
+    fecha_inicio: date,
+    fecha_fin: date,
+    user: CurrentUser = Security(get_current_user),
+    db: Session = Depends(get_db)
+):
     """
     Obtiene los saldos del usuario dentro de un rango de fechas.
-
-    Parámetros:
-    ----------
-    fecha_inicio : date
-    fecha_fin : date
-
-    Errores:
-    -------
-    400 Bad Request
-        Si el rango de fechas es inválido.
     """
     if fecha_inicio > fecha_fin:
         raise HTTPException(
@@ -89,10 +101,16 @@ async def saldos_por_rango(
             detail=str(e)
         )
 
-    await cache_set(cache_key, data)
+    serialized = serialize_saldos(data)
 
-    return data
+    await cache_set(cache_key, serialized)
 
+    return serialized
+
+
+# =========================================================
+# REAJUSTE DE SALDO
+# =========================================================
 @router.post("/reajuste", status_code=status.HTTP_204_NO_CONTENT)
 async def reajustar_saldo_cuenta(
     payload: ReajusteSaldoIn,
@@ -114,8 +132,13 @@ async def reajustar_saldo_cuenta(
             saldo_real=payload.saldo_real,
             descripcion=payload.descripcion
         )
-        # 🧨 INVALIDACIÓN DE CACHE
+
+        # 🧨 INVALIDACIÓN DE CACHE (crítico)
         await cache_delete_pattern(f"saldos:cuentas:{user.id}")
         await cache_delete_pattern(f"saldos:rango:{user.id}:*")
+
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
