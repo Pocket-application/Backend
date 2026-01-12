@@ -1,8 +1,24 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from middleware.logging import auditoria_middleware
 from routers import auth, usuarios, cuentas, categorias, flujo, transferencias, saldos
 
 app = FastAPI(title="Sistema Financiero")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",     # Vite dev
+        "http://127.0.0.1:5173",
+        "oscarpalomino.dev/pocketapp", # Producción
+        "https://oscarpalomino.dev/pocketapp",
+        "www.oscarpalomino.dev/pocketapp",
+        "https://www.oscarpalomino.dev/pocketapp",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.middleware("http")(auditoria_middleware)
 

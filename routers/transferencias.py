@@ -235,7 +235,10 @@ async def obtener_transferencia(
     )
 
     if not transferencia:
-        raise HTTPException(status_code=404, detail="Transferencia no encontrada") 
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Transferencia no encontrada"
+            ) 
 
     serialized = serialize_transferencia(transferencia)
     await cache_set(cache_key, serialized)
