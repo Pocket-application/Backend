@@ -164,3 +164,8 @@ def actualizar_password(
 
     db.commit()
     return {"detail": "password actualizada correctamente"}
+
+
+@router.get("/me", response_model=UsuarioOut)
+def get_me(current_user: Usuario = Depends(get_current_user)):
+    return current_user
