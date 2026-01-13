@@ -5,12 +5,14 @@ services:
     container_name: finanzas_api
     restart: always
     ports:
-      - "8000:8000"  # 🔓 API expuesta
+      - "8000:8000"
     env_file:
       - .env
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   postgres:
     image: postgres:15
@@ -22,8 +24,6 @@ services:
       POSTGRES_DB: postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./database.sql:/docker-entrypoint-initdb.d/database.sql
-    # 🚫 NO ports → no se expone
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -34,7 +34,6 @@ services:
     image: redis:7
     container_name: finanzas_redis
     restart: always
-    # 🚫 NO ports → no se expone
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s

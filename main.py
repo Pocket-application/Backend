@@ -10,10 +10,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",     # Vite dev
         "http://127.0.0.1:5173",
-        "oscarpalomino.dev/pocketapp", # Producción
-        "https://oscarpalomino.dev/pocketapp",
-        "www.oscarpalomino.dev/pocketapp",
-        "https://www.oscarpalomino.dev/pocketapp",
+        "https://oscarpalomino.dev",
+        "https://www.oscarpalomino.dev",
     ],
     allow_credentials=True,
     allow_methods=["*"],

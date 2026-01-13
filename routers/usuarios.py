@@ -167,5 +167,16 @@ def actualizar_password(
 
 
 @router.get("/me", response_model=UsuarioOut)
-def get_me(current_user: Usuario = Depends(get_current_user)):
-    return current_user
+def get_me(
+    user: CurrentUser = Security(get_current_user),
+    db: Session = Depends(get_db)
+):
+    usuario = db.get(Usuario, user.id)
+
+    if not usuario:
+        raise HTTPException(
+            status_code=404,
+            detail="Usuario no encontrado"
+        )
+
+    return usuario
