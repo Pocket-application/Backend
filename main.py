@@ -8,7 +8,7 @@ app = FastAPI(title="Sistema Financiero")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5173",     # Vite dev
+        "http://localhost:5173",
         "http://127.0.0.1:5173",
         "https://oscarpalomino.dev",
         "https://www.oscarpalomino.dev",
@@ -18,6 +18,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# 👇 Middleware correcto
 app.middleware("http")(auditoria_middleware)
 
 app.include_router(auth.router)

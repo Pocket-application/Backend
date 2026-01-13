@@ -7,11 +7,11 @@ SET search_path TO finanzas;
 -- ENUMS (MEJOR QUE CHECK STRINGS)
 -- =========================================================
 
-CREATE TYPE IF NOT EXISTS tipo_movimiento_enum AS ENUM ('Ingreso', 'Egreso');
-CREATE TYPE IF NOT EXISTS estado_movimiento_enum AS ENUM ('pendiente', 'confirmado');
-CREATE TYPE IF NOT EXISTS tipo_egreso_enum AS ENUM ('Fijo', 'Variable');
-CREATE TYPE IF NOT EXISTS rol_usuario_enum AS ENUM ('user', 'admin');
-CREATE TYPE IF NOT EXISTS estado_transferencia_enum AS ENUM ('pendiente', 'confirmada');
+CREATE TYPE tipo_movimiento_enum AS ENUM ('Ingreso', 'Egreso');
+CREATE TYPE estado_movimiento_enum AS ENUM ('pendiente', 'confirmado');
+CREATE TYPE tipo_egreso_enum AS ENUM ('Fijo', 'Variable');
+CREATE TYPE rol_usuario_enum AS ENUM ('user', 'admin');
+CREATE TYPE estado_transferencia_enum AS ENUM ('pendiente', 'confirmada');
 
 -- =========================================================
 -- USUARIOS
@@ -129,10 +129,10 @@ CREATE INDEX IF NOT EXISTS idx_flujo_estado ON flujo(estado);
 CREATE TABLE IF NOT EXISTS auditoria (
     id BIGSERIAL PRIMARY KEY,
     fecha TIMESTAMPTZ NOT NULL DEFAULT now(),
-    usuario_id VARCHAR(9) REFERENCES usuarios(id) ON DELETE SET NULL,
+    usuario_id VARCHAR(9) NULL REFERENCES usuarios(id) ON DELETE SET NULL,
     metodo TEXT NOT NULL,
     ruta TEXT NOT NULL,
-    status_code INTEGER NOT NULL,
+    status_code INTEGER DEFAULT 500,
     ip INET,
     body JSONB,
     error TEXT,
@@ -166,7 +166,7 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_usuario_id
     ON refresh_tokens(usuario_id);
 
-CREATE INDEX idx_refresh_tokens_expira
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expira
     ON refresh_tokens(expira);
 
 

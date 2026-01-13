@@ -12,7 +12,7 @@ engine = create_engine(
     DATABASE_URL,
     pool_pre_ping=True,
     connect_args={
-        "options": f"-csearch_path={DB_SCHEMA}"
+        "options": f"-c search_path={DB_SCHEMA}"
     }
 )
 
