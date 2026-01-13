@@ -7,17 +7,17 @@ SET search_path TO finanzas;
 -- ENUMS (MEJOR QUE CHECK STRINGS)
 -- =========================================================
 
-CREATE TYPE tipo_movimiento_enum AS ENUM ('Ingreso', 'Egreso');
-CREATE TYPE estado_movimiento_enum AS ENUM ('pendiente', 'confirmado');
-CREATE TYPE tipo_egreso_enum AS ENUM ('Fijo', 'Variable');
-CREATE TYPE rol_usuario_enum AS ENUM ('user', 'admin');
-CREATE TYPE estado_transferencia_enum AS ENUM ('pendiente', 'confirmada');
+CREATE TYPE IF NOT EXISTS tipo_movimiento_enum AS ENUM ('Ingreso', 'Egreso');
+CREATE TYPE IF NOT EXISTS estado_movimiento_enum AS ENUM ('pendiente', 'confirmado');
+CREATE TYPE IF NOT EXISTS tipo_egreso_enum AS ENUM ('Fijo', 'Variable');
+CREATE TYPE IF NOT EXISTS rol_usuario_enum AS ENUM ('user', 'admin');
+CREATE TYPE IF NOT EXISTS estado_transferencia_enum AS ENUM ('pendiente', 'confirmada');
 
 -- =========================================================
 -- USUARIOS
 -- =========================================================
 
-CREATE TABLE usuarios (
+CREATE TABLE IF NOT EXISTS usuarios (
     id VARCHAR(9) PRIMARY KEY,
     nombre TEXT NOT NULL,
     apellido TEXT NOT NULL,
@@ -32,27 +32,27 @@ CREATE TABLE usuarios (
         CHECK (telefono ~ '^[0-9]{10}$')
 );
 
-CREATE INDEX idx_usuarios_correo ON usuarios(correo);
-CREATE INDEX idx_usuarios_telefono ON usuarios(telefono);
+CREATE INDEX IF NOT EXISTS idx_usuarios_correo ON usuarios(correo);
+CREATE INDEX IF NOT EXISTS idx_usuarios_telefono ON usuarios(telefono);
 
 -- =========================================================
 -- CUENTAS
 -- =========================================================
 
-CREATE TABLE cuentas (
+CREATE TABLE IF NOT EXISTS cuentas (
     id SERIAL PRIMARY KEY,
     usuario_id VARCHAR(9) NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
     nombre TEXT NOT NULL,
     UNIQUE(usuario_id, nombre)
 );
 
-CREATE INDEX idx_cuentas_usuario ON cuentas(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_cuentas_usuario ON cuentas(usuario_id);
 
 -- =========================================================
 -- CATEGORÍAS
 -- =========================================================
 
-CREATE TABLE categorias (
+CREATE TABLE IF NOT EXISTS categorias (
     id SERIAL PRIMARY KEY,
     usuario_id VARCHAR(9) NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
     nombre TEXT NOT NULL,
@@ -60,13 +60,13 @@ CREATE TABLE categorias (
     UNIQUE(usuario_id, nombre, tipo_movimiento)
 );
 
-CREATE INDEX idx_categorias_usuario ON categorias(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_categorias_usuario ON categorias(usuario_id);
 
 -- =========================================================
 -- TRANSFERENCIAS
 -- =========================================================
 
-CREATE TABLE transferencias (
+CREATE TABLE IF NOT EXISTS transferencias (
     id SERIAL PRIMARY KEY,
     usuario_id VARCHAR(9) NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
     cuenta_origen_id INT NOT NULL REFERENCES cuentas(id) ON DELETE RESTRICT,
@@ -80,14 +80,14 @@ CREATE TABLE transferencias (
         CHECK (cuenta_origen_id <> cuenta_destino_id)
 );
 
-CREATE INDEX idx_transferencias_usuario ON transferencias(usuario_id);
-CREATE INDEX idx_transferencias_cuentas ON transferencias(cuenta_origen_id, cuenta_destino_id);
+CREATE INDEX IF NOT EXISTS idx_transferencias_usuario ON transferencias(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_transferencias_cuentas ON transferencias(cuenta_origen_id, cuenta_destino_id);
 
 -- =========================================================
 -- FLUJO (MOVIMIENTOS CONTABLES)
 -- =========================================================
 
-CREATE TABLE flujo (
+CREATE TABLE IF NOT EXISTS flujo (
     id SERIAL PRIMARY KEY,
     usuario_id VARCHAR(9) NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
     fecha DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -115,18 +115,18 @@ CREATE TABLE flujo (
 );
 
 -- Índices críticos
-CREATE INDEX idx_flujo_usuario ON flujo(usuario_id);
-CREATE INDEX idx_flujo_fecha ON flujo(usuario_id, fecha);
-CREATE INDEX idx_flujo_cuenta ON flujo(cuenta_id);
-CREATE INDEX idx_flujo_categoria ON flujo(categoria_id);
-CREATE INDEX idx_flujo_transferencia ON flujo(transferencia_id);
-CREATE INDEX idx_flujo_estado ON flujo(estado);
+CREATE INDEX IF NOT EXISTS idx_flujo_usuario ON flujo(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_flujo_fecha ON flujo(usuario_id, fecha);
+CREATE INDEX IF NOT EXISTS idx_flujo_cuenta ON flujo(cuenta_id);
+CREATE INDEX IF NOT EXISTS idx_flujo_categoria ON flujo(categoria_id);
+CREATE INDEX IF NOT EXISTS idx_flujo_transferencia ON flujo(transferencia_id);
+CREATE INDEX IF NOT EXISTS idx_flujo_estado ON flujo(estado);
 
 -- =========================================================
 -- AUDITORÍA (LOGS FIRMADOS)
 -- =========================================================
 
-CREATE TABLE auditoria (
+CREATE TABLE IF NOT EXISTS auditoria (
     id BIGSERIAL PRIMARY KEY,
     fecha TIMESTAMPTZ NOT NULL DEFAULT now(),
     usuario_id VARCHAR(9) REFERENCES usuarios(id) ON DELETE SET NULL,
@@ -143,14 +143,14 @@ CREATE TABLE auditoria (
     firma_anterior TEXT
 );
 
-CREATE INDEX idx_auditoria_fecha ON auditoria(fecha);
-CREATE INDEX idx_auditoria_usuario ON auditoria(usuario_id);
-CREATE INDEX idx_auditoria_ruta ON auditoria(ruta);
+CREATE INDEX IF NOT EXISTS idx_auditoria_fecha ON auditoria(fecha);
+CREATE INDEX IF NOT EXISTS idx_auditoria_usuario ON auditoria(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_auditoria_ruta ON auditoria(ruta);
 
 -- =========================================================
 -- REFRESH TOKENS
 -- =========================================================
-CREATE TABLE refresh_tokens (
+CREATE TABLE IF NOT EXISTS refresh_tokens (
     id SERIAL PRIMARY KEY,
     usuario_id VARCHAR(9) NOT NULL,
     token TEXT NOT NULL UNIQUE,
@@ -163,7 +163,7 @@ CREATE TABLE refresh_tokens (
         ON DELETE CASCADE
 );
 
-CREATE INDEX idx_refresh_tokens_usuario_id
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_usuario_id
     ON refresh_tokens(usuario_id);
 
 CREATE INDEX idx_refresh_tokens_expira
@@ -357,6 +357,5 @@ BEGIN
 
 END;
 $$ LANGUAGE plpgsql;
-
 
 COMMIT;
