@@ -6,7 +6,7 @@ import uuid
 
 EstadoTransferenciaEnum = Enum(
     "Pendiente",
-    "Confirmada",
+    "Confirmado",
     name="estado_transferencia_enum",
     create_type=False
 )

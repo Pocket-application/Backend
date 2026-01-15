@@ -22,7 +22,7 @@ TipoMovimientoEnum = Enum(
 
 EstadoEnum = Enum(
     "Pendiente",
-    "Confirmada",
+    "Confirmado",
     name="estado_movimiento_enum",
     create_type=False
 )
@@ -124,7 +124,7 @@ class Flujo(Base):
 
         # Estado permitido
         CheckConstraint(
-            "estado IN ('pendiente', 'confirmado')",
+            "estado IN ('Pendiente', 'Confirmado')",
             name="ck_flujo_estado"
         ),
 

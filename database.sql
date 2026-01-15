@@ -8,10 +8,10 @@ SET search_path TO finanzas;
 -- =========================================================
 
 CREATE TYPE tipo_movimiento_enum AS ENUM ('Ingreso', 'Egreso');
-CREATE TYPE estado_movimiento_enum AS ENUM ('Pendiente', 'Confirmada');
+CREATE TYPE estado_movimiento_enum AS ENUM ('Pendiente', 'Confirmado');
 CREATE TYPE tipo_egreso_enum AS ENUM ('Fijo', 'Variable');
 CREATE TYPE rol_usuario_enum AS ENUM ('user', 'admin');
-CREATE TYPE estado_transferencia_enum AS ENUM ('Pendiente', 'Confirmada');
+CREATE TYPE estado_transferencia_enum AS ENUM ('Pendiente', 'Confirmado');
 
 -- =========================================================
 -- USUARIOS
@@ -97,7 +97,7 @@ CREATE TABLE IF NOT EXISTS flujo (
     cuenta_id INT NOT NULL REFERENCES cuentas(id) ON DELETE RESTRICT,
 
     tipo_movimiento tipo_movimiento_enum NOT NULL,
-    estado estado_movimiento_enum NOT NULL DEFAULT 'confirmado',
+    estado estado_movimiento_enum NOT NULL DEFAULT 'Confirmado',
 
     monto NUMERIC(14,2) NOT NULL CHECK (monto >= 0),
 
@@ -195,7 +195,7 @@ BEGIN
     FROM cuentas c
     LEFT JOIN flujo f
         ON f.cuenta_id = c.id
-        AND f.estado = 'confirmado'
+        AND f.estado = 'Confirmado'
     WHERE c.usuario_id = uid
     GROUP BY c.id, c.nombre
     ORDER BY c.nombre;
@@ -248,7 +248,7 @@ BEGIN
     FROM cuentas c
     LEFT JOIN flujo f
         ON f.cuenta_id = c.id
-        AND f.estado = 'confirmado'
+        AND f.estado = 'Confirmado'
         AND f.fecha BETWEEN fecha_inicio AND fecha_fin
     WHERE c.usuario_id = uid
     GROUP BY c.id, c.nombre
@@ -347,7 +347,7 @@ BEGIN
         v_categoria_id,
         p_cuenta_id,
         v_tipo_movimiento,
-        'confirmado',
+        'Confirmado',
         v_monto,
         CASE
             WHEN v_tipo_movimiento = 'Egreso' THEN 'Variable'::tipo_egreso_enum
