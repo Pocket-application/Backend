@@ -8,10 +8,10 @@ SET search_path TO finanzas;
 -- =========================================================
 
 CREATE TYPE tipo_movimiento_enum AS ENUM ('Ingreso', 'Egreso');
-CREATE TYPE estado_movimiento_enum AS ENUM ('pendiente', 'confirmado');
+CREATE TYPE estado_movimiento_enum AS ENUM ('Pendiente', 'Confirmada');
 CREATE TYPE tipo_egreso_enum AS ENUM ('Fijo', 'Variable');
 CREATE TYPE rol_usuario_enum AS ENUM ('user', 'admin');
-CREATE TYPE estado_transferencia_enum AS ENUM ('pendiente', 'confirmada');
+CREATE TYPE estado_transferencia_enum AS ENUM ('Pendiente', 'Confirmada');
 
 -- =========================================================
 -- USUARIOS

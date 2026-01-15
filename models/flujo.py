@@ -21,8 +21,8 @@ TipoMovimientoEnum = Enum(
 )
 
 EstadoEnum = Enum(
-    "pendiente",
-    "confirmado",
+    "Pendiente",
+    "Confirmada",
     name="estado_movimiento_enum",
     create_type=False
 )

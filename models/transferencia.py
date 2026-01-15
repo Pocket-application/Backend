@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 import uuid
 
 EstadoTransferenciaEnum = Enum(
-    "pendiente",
-    "confirmada",
+    "Pendiente",
+    "Confirmada",
     name="estado_transferencia_enum",
     create_type=False
 )
