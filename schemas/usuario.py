@@ -14,13 +14,10 @@ class UsuarioCreate(BaseModel):
 
 
 class UsuarioOut(BaseModel):
-    id: str
     nombre: str
     apellido: str
     correo: EmailStr
     telefono: str | None = None
-    rol: str
-    verificado: bool
 
     class Config:
         from_attributes = True
