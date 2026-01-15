@@ -10,7 +10,7 @@ class FlujoBase(BaseModel):
     cuenta_id: int
     tipo_movimiento: Literal["Ingreso", "Egreso"]
     tipo_egreso: Literal["Fijo", "Variable"] | None = None
-    estado: Literal["pendiente", "confirmado"]
+    estado: Literal["Pendiente", "Confirmado"]
     monto: float
 
     @field_validator("tipo_egreso")
@@ -40,7 +40,7 @@ class FlujoUpdate(BaseModel):
     descripcion: str | None = None
     categoria_id: int | None = None
     cuenta_id: int | None = None
-    estado: Literal["pendiente", "confirmado"] | None = None
+    estado: Literal["Pendiente", "Confirmado"] | None = None
     monto: float | None = None
     tipo_egreso: Literal["Fijo", "Variable"] | None = None
     

@@ -125,7 +125,7 @@ async def crear_transferencia(
         cuenta_destino_id=data.cuenta_destino_id,
         monto=data.monto,
         descripcion=data.descripcion,
-        estado="confirmada"
+        estado="Confirmado"
     )
 
     try:
@@ -140,7 +140,7 @@ async def crear_transferencia(
             cuenta_id=data.cuenta_origen_id,
             tipo_movimiento="Egreso",
             tipo_egreso="Variable",
-            estado="confirmado",
+            estado="Confirmado",
             monto=data.monto,
             transferencia_id=transferencia.id
         )
@@ -152,7 +152,7 @@ async def crear_transferencia(
             categoria_id=categoria_ingreso.id,
             cuenta_id=data.cuenta_destino_id,
             tipo_movimiento="Ingreso",
-            estado="confirmado",
+            estado="Confirmado",
             monto=data.monto,
             transferencia_id=transferencia.id
         )
