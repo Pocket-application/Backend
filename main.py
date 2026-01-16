@@ -28,3 +28,7 @@ app.include_router(categorias.router)
 app.include_router(flujo.router)
 app.include_router(transferencias.router)
 app.include_router(saldos.router)
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
