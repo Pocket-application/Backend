@@ -12,6 +12,8 @@ app.add_middleware(
         "http://127.0.0.1:5173",
         "https://oscarpalomino.dev",
         "https://www.oscarpalomino.dev",
+        "capacitor://localhost",
+        "ionic://localhost",
     ],
     allow_credentials=True,
     allow_methods=["*"],
