@@ -1,9 +1,16 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.proxy_headers import ProxyHeadersMiddleware
+
 from middleware.logging import auditoria_middleware
 from routers import auth, usuarios, cuentas, categorias, flujo, transferencias, saldos
 
 app = FastAPI(title="Sistema Financiero")
+
+app.add_middleware(
+    ProxyHeadersMiddleware,
+    trusted_hosts="*"
+)
 
 app.add_middleware(
     CORSMiddleware,
