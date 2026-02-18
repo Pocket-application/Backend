@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from middleware.logging import auditoria_middleware
-from routers import auth, usuarios, cuentas, categorias, flujo, transferencias, saldos
+from routers import auth, usuarios, cuentas, categorias, flujo, transferencias, saldos, auditoria
 
 app = FastAPI(title="Sistema Financiero")
 
@@ -33,6 +33,7 @@ app.include_router(categorias.router)
 app.include_router(flujo.router)
 app.include_router(transferencias.router)
 app.include_router(saldos.router)
+app.include_router(auditoria.router)
 
 @app.get("/health")
 def health():

@@ -58,3 +58,17 @@ def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token inválido o expirado"
         )
+
+
+def get_current_admin(
+    current_user: CurrentUser = Depends(get_current_user)
+) -> CurrentUser:
+    """
+    Dependencia para restringir acceso solo a administradores.
+    """
+    if current_user.rol != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permisos de administrador"
+        )
+    return current_user
